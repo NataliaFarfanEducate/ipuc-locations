@@ -559,16 +559,33 @@ async function loadFromSheets() {
     const res = await fetch(SHEETS_CSV_URL);
     if (!res.ok) return null;
     const text = await res.text();
-    const rows = text.trim().split('\n').slice(1); // skip header
-    return rows.map(row => {
-      const cols = row.match(/(?:"([^"]*)"|([^,]*))/g)
-        .map(c => c.replace(/^"|"$/g, '').trim());
+    const rows = text.trim().split('\n');
+    const header = rows[0].split(',').map(h => h.replace(/"/g,'').trim());
+    return rows.slice(1).map(row => {
+      // parse CSV respecting quoted fields
+      const cols = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < row.length; i++) {
+        if (row[i] === '"') { inQ = !inQ; continue; }
+        if (row[i] === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+        else cur += row[i];
+      }
+      cols.push(cur.trim());
+      const get = key => cols[header.indexOf(key)] || '';
       return {
-        id: +cols[0], name: cols[1], city: cols[2],
-        lat: +cols[3], lng: +cols[4],
-        address: cols[5], schedule: cols[6], desc: cols[7]
+        id:         +get('id'),
+        name:        get('name'),
+        city:        get('city'),
+        department:  get('department'),
+        lat:        +get('lat'),
+        lng:        +get('lng'),
+        address:     get('address'),
+        schedule:    get('schedule'),
+        desc:        get('desc'),
+        phone:       get('phone'),
+        district:    get('district'),
       };
-    }).filter(c => c.lat && c.lng);
+    }).filter(c => c.lat && c.lng && c.active !== 'FALSE');
   } catch (e) {
     console.warn('No se pudo cargar Google Sheets, usando datos locales.', e);
     return null;
