@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPUC Colombia — Encuentra tu Iglesia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:       #1565C0;
+      --primary-dark:  #0D47A1;
+      --primary-light: #1976D2;
+      --gold:          #FFC107;
+      --gold-dark:     #FF8F00;
+      --dark:          #0f172a;
+      --text:          #1e293b;
+      --text-light:    #64748b;
+      --bg:            #f1f5f9;
+      --card:          #ffffff;
+      --border:        #e2e8f0;
+      --success:       #22c55e;
+      --shadow:        0 4px 24px rgba(21,101,192,0.09);
+      --shadow-lg:     0 12px 40px rgba(21,101,192,0.18);
+      --r:             16px;
+      --r-sm:          8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── NAVBAR ───────────────────────────────────────── */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: rgba(13,71,161,0.96);
+      backdrop-filter: blur(14px);
+      height: 64px;
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.18);
+    }
+    .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .nav-logo {
+      width: 38px; height: 38px; background: var(--gold);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 800; color: var(--primary-dark);
+      box-shadow: 0 2px 10px rgba(255,193,7,0.4);
+    }
+    .nav-title { font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: .3px; }
+    .nav-links { display: flex; align-items: center; gap: .4rem; list-style: none; }
+    .nav-links a {
+      color: rgba(255,255,255,.8); text-decoration: none;
+      font-size: .875rem; font-weight: 500;
+      padding: .4rem .8rem; border-radius: 6px; transition: all .2s;
+    }
+    .nav-links a:hover { color: #fff; background: rgba(255,255,255,.12); }
+    .nav-cta { background: var(--gold) !important; color: var(--primary-dark) !important; font-weight: 600 !important; }
+    .nav-cta:hover { background: var(--gold-dark) !important; }
+    .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: .4rem; }
+    .nav-toggle span { display: block; width: 22px; height: 2px; background: #fff; margin: 5px 0; border-radius: 2px; transition: .3s; }
+
+    /* ── HERO ─────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(145deg, #0a1f6b 0%, #1565C0 45%, #0891b2 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 7rem 2rem 5rem;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(255,193,7,.08) 0%, transparent 60%),
+                  url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    .hero-cross {
+      font-size: 5rem; margin-bottom: 1rem;
+      animation: float 3.5s ease-in-out infinite;
+      filter: drop-shadow(0 6px 20px rgba(0,0,0,.35));
+      position: relative; z-index: 1;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,193,7,.18); border: 1px solid rgba(255,193,7,.45);
+      color: var(--gold); font-size: .72rem; font-weight: 600;
+      padding: .3rem 1rem; border-radius: 100px;
+      letter-spacing: 1.8px; text-transform: uppercase;
+      margin-bottom: 1.5rem; position: relative; z-index: 1;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 800;
+      color: #fff; line-height: 1.15; margin-bottom: 1.25rem;
+      text-shadow: 0 2px 24px rgba(0,0,0,.25);
+      position: relative; z-index: 1;
+    }
+    .hero h1 span { color: var(--gold); }
+    .hero > p {
+      font-size: 1.05rem; color: rgba(255,255,255,.82);
+      max-width: 520px; margin: 0 auto 2.5rem;
+      position: relative; z-index: 1;
+    }
+    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .78rem 1.75rem; border-radius: 100px;
+      font-size: .95rem; font-weight: 600; font-family: 'Poppins', sans-serif;
+      border: none; cursor: pointer; text-decoration: none; transition: all .25s;
+    }
+    .btn-gold { background: var(--gold); color: var(--primary-dark); box-shadow: 0 4px 20px rgba(255,193,7,.4); }
+    .btn-gold:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(255,193,7,.55); }
+    .btn-outline { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.45); }
+    .btn-outline:hover { background: rgba(255,255,255,.1); border-color: #fff; }
+    .btn:disabled { opacity: .65; cursor: not-allowed; transform: none !important; }
+    .hero-scroll {
+      position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,.4); font-size: 1.4rem; animation: bounce 2.2s infinite;
+    }
+    @keyframes bounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(9px)} }
+
+    /* ── STATS ────────────────────────────────────────── */
+    .stats { background: var(--card); padding: 3rem 2rem; box-shadow: 0 4px 24px rgba(0,0,0,.06); }
+    .stats-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 2rem; text-align: center;
+    }
+    .stat h3 { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: .2rem; }
+    .stat p  { color: var(--text-light); font-size: .88rem; }
+
+    /* ── SECTION COMMONS ──────────────────────────────── */
+    section { padding: 5rem 2rem; }
+    .sec-head { text-align: center; margin-bottom: 3rem; }
+    .sec-badge {
+      display: inline-block; background: rgba(21,101,192,.08); color: var(--primary);
+      font-size: .72rem; font-weight: 600; padding: .3rem 1rem; border-radius: 100px;
+      letter-spacing: 1.8px; text-transform: uppercase; margin-bottom: .75rem;
+    }
+    .sec-head h2 { font-size: clamp(1.75rem, 3vw, 2.4rem); font-weight: 700; color: var(--dark); margin-bottom: .7rem; }
+    .sec-head p  { color: var(--text-light); max-width: 500px; margin: 0 auto; }
+
+    /* ── NEARBY ───────────────────────────────────────── */
+    #nearby { background: var(--bg); }
+    .nearby-wrap { max-width: 860px; margin: 0 auto; }
+    .locate-card {
+      background: linear-gradient(135deg, #0D47A1, #1976D2);
+      border-radius: var(--r); padding: 2.5rem 2rem;
+      text-align: center; color: #fff;
+      margin-bottom: 2rem; position: relative; overflow: hidden;
+    }
+    .locate-card::after {
+      content: ''; position: absolute; top: -60px; right: -40px;
+      width: 260px; height: 260px; background: rgba(255,255,255,.05); border-radius: 50%;
+      pointer-events: none;
+    }
+    .locate-card h3 { font-size: 1.35rem; font-weight: 700; margin-bottom: .5rem; }
+    .locate-card p  { opacity: .82; margin-bottom: 1.5rem; font-size: .95rem; }
+    .nearby-results { display: none; }
+    .nearby-results.visible { display: block; }
+    .nearby-heading { font-size: .95rem; font-weight: 600; color: var(--dark); margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
+    .nearby-list { display: grid; gap: .9rem; }
+    .nearby-item {
+      background: var(--card); border-radius: var(--r-sm);
+      padding: 1.1rem 1.4rem; display: flex; align-items: center; gap: 1rem;
+      box-shadow: var(--shadow); border-left: 4px solid var(--primary);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .nearby-item:hover { transform: translateX(5px); box-shadow: var(--shadow-lg); }
+    .nearby-rank {
+      width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .82rem;
+    }
+    .nearby-rank.gold { background: var(--gold); color: var(--primary-dark); }
+    .nearby-info { flex: 1; }
+    .nearby-info h4 { font-size: .92rem; font-weight: 600; color: var(--dark); }
+    .nearby-info p  { font-size: .78rem; color: var(--text-light); }
+    .nearby-dist    { font-size: .8rem; font-weight: 600; color: var(--primary); white-space: nowrap; }
+
+    /* ── MAP ──────────────────────────────────────────── */
+    #map-section { background: var(--dark); padding: 5rem 2rem; }
+    #map-section .sec-head h2 { color: #fff; }
+    #map-section .sec-badge   { background: rgba(255,255,255,.1); color: var(--gold); }
+    #map-section .sec-head p  { color: rgba(255,255,255,.55); }
+    #map {
+      height: 520px; max-width: 1100px; margin: 0 auto; display: block;
+      border-radius: var(--r); overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+
+    /* ── CHURCHES ─────────────────────────────────────── */
+    #churches { background: var(--card); }
+    .search-wrap { max-width: 480px; margin: 0 auto 1.75rem; position: relative; }
+    .search-wrap i { position: absolute; left: 1.1rem; top: 50%; transform: translateY(-50%); color: var(--text-light); }
+    #churchSearch {
+      width: 100%; padding: .82rem 1rem .82rem 2.8rem;
+      border: 2px solid var(--border); border-radius: 100px;
+      font-size: .92rem; font-family: 'Poppins', sans-serif;
+      outline: none; background: var(--bg); transition: border-color .2s;
+    }
+    #churchSearch:focus { border-color: var(--primary); background: #fff; }
+    .city-filters { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2.25rem; }
+    .city-btn {
+      padding: .4rem 1.1rem; border-radius: 100px;
+      border: 2px solid var(--border); background: #fff;
+      color: var(--text-light); font-size: .8rem; font-weight: 500;
+      cursor: pointer; transition: all .2s; font-family: 'Poppins', sans-serif;
+    }
+    .city-btn:hover, .city-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .churches-grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;
+    }
+    .church-card {
+      background: var(--card); border-radius: var(--r); overflow: hidden;
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+      transition: transform .25s, box-shadow .25s;
+    }
+    .church-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+    .cc-head {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary-light));
+      padding: 1.4rem; display: flex; align-items: flex-start; gap: 1rem;
+    }
+    .cc-icon {
+      width: 46px; height: 46px; flex-shrink: 0;
+      background: rgba(255,255,255,.18); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+    }
+    .cc-head h3    { color: #fff; font-size: .97rem; font-weight: 600; margin-bottom: .25rem; }
+    .cc-head .city { font-size: .74rem; color: rgba(255,255,255,.72); display: flex; align-items: center; gap: .3rem; }
+    .cc-body { padding: 1.2rem; }
+    .cc-body p { font-size: .855rem; color: var(--text-light); margin-bottom: 1rem; }
+    .cc-meta { display: flex; flex-direction: column; gap: .4rem; }
+    .cc-meta span { font-size: .8rem; color: var(--text); display: flex; align-items: flex-start; gap: .5rem; }
+    .cc-meta i { color: var(--primary); margin-top: 3px; flex-shrink: 0; font-size: .74rem; }
+
+    /* ── NEWS ─────────────────────────────────────────── */
+    #news { background: var(--bg); }
+    .news-grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;
+    }
+    .news-card {
+      background: var(--card); border-radius: var(--r); overflow: hidden;
+      box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s;
+    }
+    .news-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
+    .news-img {
+      height: 175px; display: flex; align-items: center; justify-content: center;
+      font-size: 3.8rem; position: relative;
+    }
+    .nc-blue   { background: linear-gradient(135deg, #0D47A1, #1976D2); }
+    .nc-green  { background: linear-gradient(135deg, #14532d, #16a34a); }
+    .nc-gold   { background: linear-gradient(135deg, #92400e, #d97706); }
+    .nc-purple { background: linear-gradient(135deg, #581c87, #9333ea); }
+    .nc-teal   { background: linear-gradient(135deg, #164e63, #0891b2); }
+    .news-date-tag {
+      position: absolute; bottom: .7rem; right: .7rem;
+      background: rgba(0,0,0,.45); color: rgba(255,255,255,.9);
+      font-size: .7rem; padding: .18rem .6rem; border-radius: 100px;
+    }
+    .nc-body { padding: 1.2rem; }
+    .nc-tag {
+      display: inline-block; background: rgba(21,101,192,.1); color: var(--primary);
+      font-size: .68rem; font-weight: 600; padding: .18rem .6rem; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: .6rem;
+    }
+    .nc-body h3 { font-size: .93rem; font-weight: 600; color: var(--dark); margin-bottom: .5rem; line-height: 1.45; }
+    .nc-body p  { font-size: .825rem; color: var(--text-light); line-height: 1.65; }
+    .nc-footer {
+      padding: 0 1.2rem 1.2rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nc-author { font-size: .74rem; color: var(--text-light); display: flex; align-items: center; gap: .4rem; }
+    .nc-read {
+      font-size: .74rem; font-weight: 600; color: var(--primary);
+      text-decoration: none; display: flex; align-items: center; gap: .3rem; transition: gap .2s;
+    }
+    .nc-read:hover { gap: .55rem; }
+
+    /* ── FOOTER ───────────────────────────────────────── */
+    footer { background: var(--dark); color: rgba(255,255,255,.65); padding: 4rem 2rem 2rem; }
+    .footer-grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 3rem;
+      padding-bottom: 3rem; border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .footer-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+    .footer-logo {
+      width: 40px; height: 40px; background: var(--gold); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 800; color: var(--primary-dark);
+    }
+    .footer-brand h3 { color: #fff; font-size: 1.05rem; }
+    .footer-col h4 { color: #fff; font-size: .88rem; font-weight: 600; margin-bottom: 1rem; }
+    .footer-col ul  { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+    .footer-col ul li a { color: rgba(255,255,255,.55); text-decoration: none; font-size: .84rem; transition: color .2s; }
+    .footer-col ul li a:hover { color: var(--gold); }
+    .footer-bottom {
+      max-width: 1100px; margin: 2rem auto 0;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: .78rem;
+    }
+    .social-links { display: flex; gap: .65rem; }
+    .social-link {
+      width: 36px; height: 36px; background: rgba(255,255,255,.08); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.65); text-decoration: none; transition: all .2s;
+    }
+    .social-link:hover { background: var(--gold); color: var(--dark); }
+
+    /* ── TOAST ────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+      background: var(--dark); color: #fff; padding: .95rem 1.5rem;
+      border-radius: var(--r-sm); box-shadow: 0 8px 32px rgba(0,0,0,.35);
+      transform: translateY(100px); opacity: 0; transition: all .3s;
+      font-size: .875rem; max-width: 320px; border-left: 4px solid transparent;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-left-color: var(--success); }
+    .toast.error   { border-left-color: #f87171; }
+
+    /* ── SPINNER ──────────────────────────────────────── */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(0,0,0,.2); border-top-color: currentColor;
+      border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESPONSIVE ───────────────────────────────────── */
+    @media (max-width: 900px) {
+      .stats-inner   { grid-template-columns: repeat(2,1fr); }
+      .footer-grid   { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .nav-links.open {
+        display: flex; flex-direction: column;
+        position: fixed; top: 64px; left: 0; right: 0;
+        background: var(--primary-dark); padding: 1rem 1.5rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      }
+      .nav-toggle  { display: block; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: 1rem; text-align: center; }
+      #map { height: 380px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ───────────────────────────────────── -->
+<nav class="navbar" id="navbar">
+  <a href="#hero" class="nav-brand">
+    <div class="nav-logo">✝</div>
+    <span class="nav-title">IPUC Colombia</span>
+  </a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#nearby">📍 Cerca de mí</a></li>
+    <li><a href="#map-section">🗺️ Mapa</a></li>
+    <li><a href="#churches">⛪ Iglesias</a></li>
+    <li><a href="#news">📰 Noticias</a></li>
+    <li><a href="#nearby" class="nav-cta">Encontrar iglesia</a></li>
+  </ul>
+  <button class="nav-toggle" id="navToggle" aria-label="Abrir menú">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────── -->
+<section class="hero" id="hero">
+  <div class="hero-cross">✝</div>
+  <span class="hero-badge">Iglesia Pentecostal Unida de Colombia</span>
+  <h1>Encuentra tu <span>Iglesia IPUC</span><br/>más cercana</h1>
+  <p>Explora nuestra red de iglesias en toda Colombia. Conecta con tu comunidad de fe, dondequiera que estés.</p>
+  <div class="hero-btns">
+    <a href="#nearby" class="btn btn-gold">
+      <i class="fas fa-location-dot"></i> Iglesias cerca de mí
+    </a>
+    <a href="#churches" class="btn btn-outline">
+      <i class="fas fa-church"></i> Ver todas las sedes
+    </a>
+  </div>
+  <a href="#stats" class="hero-scroll"><i class="fas fa-chevron-down"></i></a>
+</section>
+
+<!-- ── STATS ────────────────────────────────────── -->
+<div class="stats" id="stats">
+  <div class="stats-inner">
+    <div class="stat"><h3 id="statCount">12</h3><p>Sedes activas</p></div>
+    <div class="stat"><h3>8</h3><p>Ciudades</p></div>
+    <div class="stat"><h3>89</h3><p>Años de historia</p></div>
+    <div class="stat"><h3>500K+</h3><p>Miembros en Colombia</p></div>
+  </div>
+</div>
+
+<!-- ── NEARBY ───────────────────────────────────── -->
+<section id="nearby">
+  <div class="sec-head">
+    <span class="sec-badge">Geolocalización</span>
+    <h2>Iglesias cerca de ti</h2>
+    <p>Activa tu ubicación y ordenamos las sedes por distancia en tiempo real.</p>
+  </div>
+  <div class="nearby-wrap">
+    <div class="locate-card">
+      <h3>¿Dónde estás ahora?</h3>
+      <p>Usaremos tu ubicación para mostrarte las iglesias más cercanas, ordenadas de menor a mayor distancia.</p>
+      <button class="btn btn-gold" id="locateBtn" onclick="locateUser()">
+        <i class="fas fa-location-crosshairs"></i> Activar mi ubicación
+      </button>
+    </div>
+    <div class="nearby-results" id="nearbyResults">
+      <p class="nearby-heading">
+        <i class="fas fa-sort-amount-up" style="color:var(--primary)"></i>
+        Sedes ordenadas por distancia a tu ubicación
+      </p>
+      <div class="nearby-list" id="nearbyList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MAP ──────────────────────────────────────── -->
+<section id="map-section">
+  <div class="sec-head">
+    <span class="sec-badge">Mapa interactivo</span>
+    <h2>Red de iglesias IPUC</h2>
+    <p>Haz clic en cualquier marcador para ver los detalles de esa sede.</p>
+  </div>
+  <div id="map"></div>
+</section>
+
+<!-- ── CHURCHES ─────────────────────────────────── -->
+<section id="churches">
+  <div class="sec-head">
+    <span class="sec-badge">Directorio</span>
+    <h2>Todas las sedes</h2>
+    <p>Información detallada de cada iglesia: dirección, horarios y descripción.</p>
+  </div>
+  <div class="search-wrap">
+    <i class="fas fa-magnifying-glass"></i>
+    <input type="text" id="churchSearch" placeholder="Buscar por nombre o ciudad…" oninput="renderChurches()" />
+  </div>
+  <div class="city-filters" id="cityFilters"></div>
+  <div class="churches-grid" id="churchesGrid"></div>
+</section>
+
+<!-- ── NEWS ─────────────────────────────────────── -->
+<section id="news">
+  <div class="sec-head">
+    <span class="sec-badge">Actualidad</span>
+    <h2>Noticias IPUC</h2>
+    <p>Últimas novedades, eventos y actividades de nuestra iglesia en Colombia.</p>
+  </div>
+  <div class="news-grid" id="newsGrid"></div>
+</section>
+
+<!-- ── FOOTER ───────────────────────────────────── -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">
+        <div class="footer-logo">✝</div>
+        <h3>IPUC Colombia</h3>
+      </div>
+      <p style="font-size:.84rem;line-height:1.75;max-width:280px">
+        La Iglesia Pentecostal Unida de Colombia, llevando el mensaje de fe
+        y esperanza a cada rincón del país desde 1937.
+      </p>
+    </div>
+    <div class="footer-col">
+      <h4>Navegación</h4>
+      <ul>
+        <li><a href="#nearby">Cerca de mí</a></li>
+        <li><a href="#map-section">Mapa</a></li>
+        <li><a href="#churches">Iglesias</a></li>
+        <li><a href="#news">Noticias</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Ministerios</h4>
+      <ul>
+        <li><a href="#">Juventud IPUC</a></li>
+        <li><a href="#">Damas IPUC</a></li>
+        <li><a href="#">Escuela Dominical</a></li>
+        <li><a href="#">Misiones</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contacto</h4>
+      <ul>
+        <li><a href="mailto:info@ipuc.org.co"><i class="fas fa-envelope" style="margin-right:.4rem"></i>info@ipuc.org.co</a></li>
+        <li><a href="tel:+576012345678"><i class="fas fa-phone" style="margin-right:.4rem"></i>(601) 234-5678</a></li>
+        <li><a href="#"><i class="fas fa-globe" style="margin-right:.4rem"></i>www.ipuc.org.co</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Iglesia Pentecostal Unida de Colombia. Todos los derechos reservados.</span>
+    <div class="social-links">
+      <a href="#" class="social-link" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+      <a href="#" class="social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+      <a href="#" class="social-link" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+      <a href="#" class="social-link" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+    </div>
+  </div>
+</footer>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const CHURCHES = [
+  { id:1,  name:'IPUC Centro',       city:'Bogotá',       lat:4.60971, lng:-74.08175, address:'Calle 123 #45-67, Centro, Bogotá',           schedule:'Dom 9am y 11am · Mié 7pm',    desc:'Sede principal de la IPUC en Bogotá, con cultos dominicales y un activo programa de jóvenes.' },
+  { id:2,  name:'IPUC Norte',        city:'Bogotá',       lat:4.65400, lng:-74.04500, address:'Av. 7 #89-10, Usaquén, Bogotá',              schedule:'Dom 10am · Vie 7pm',           desc:'Iglesia del norte de Bogotá con actividades para toda la familia y escuela dominical.' },
+  { id:3,  name:'IPUC Sur',          city:'Bogotá',       lat:4.57090, lng:-74.09720, address:'Cra 10 #20-30, Tunjuelito, Bogotá',          schedule:'Dom 8am y 10am · Jue 7pm',    desc:'Sede del sur, conocida por su comunidad activa y eventos mensuales de evangelización.' },
+  { id:4,  name:'IPUC Occidente',    city:'Bogotá',       lat:4.61000, lng:-74.13000, address:'Calle 45 #30-40, Fontibón, Bogotá',          schedule:'Dom 10am · Mié 7pm',          desc:'Iglesia con programas de ayuda social a la comunidad del occidente de la ciudad.' },
+  { id:5,  name:'IPUC Kennedy',      city:'Bogotá',       lat:4.62610, lng:-74.14670, address:'Cra 78K #42-55, Kennedy, Bogotá',            schedule:'Dom 9am y 6pm · Mar 7pm',     desc:'Una de las sedes más grandes, con ministerio de jóvenes y programa de música.' },
+  { id:6,  name:'IPUC El Poblado',   city:'Medellín',     lat:6.21010, lng:-75.56640, address:'Cra 43A #14-27, El Poblado, Medellín',       schedule:'Dom 10am · Jue 7pm',          desc:'Sede en El Poblado con ambiente moderno y una comunidad joven muy dinámica.' },
+  { id:7,  name:'IPUC Laureles',     city:'Medellín',     lat:6.24600, lng:-75.59100, address:'Cll 33 #73-15, Laureles, Medellín',          schedule:'Dom 9am y 11am · Mié 7:30pm', desc:'Iglesia familiar en el corazón de Laureles con cultos para niños y adultos.' },
+  { id:8,  name:'IPUC Cali Norte',   city:'Cali',         lat:3.45160, lng:-76.53200, address:'Av. 3N #48-20, Cali',                       schedule:'Dom 10am · Vie 7pm',           desc:'Sede principal de Cali con amplio programa misionero y escuela bíblica.' },
+  { id:9,  name:'IPUC Barranquilla', city:'Barranquilla', lat:10.98780, lng:-74.78890, address:'Cra 54 #72-30, El Prado, Barranquilla',    schedule:'Dom 9am y 11am · Mié 7pm',    desc:'Iglesia en la capital del Atlántico con énfasis en evangelismo y trabajo social.' },
+  { id:10, name:'IPUC Bucaramanga',  city:'Bucaramanga',  lat:7.11930, lng:-73.12270, address:'Cll 48 #28-15, Cabecera, Bucaramanga',       schedule:'Dom 10am · Jue 7pm',          desc:'Sede activa en Bucaramanga con ministerios de música y danza.' },
+  { id:11, name:'IPUC Pereira',      city:'Pereira',      lat:4.81330, lng:-75.69610, address:'Av. 30 de Agosto #40-28, Pereira',           schedule:'Dom 9:30am y 6pm · Mié 7pm',  desc:'Iglesia del Eje Cafetero con grupos de vida activos y misión social.' },
+  { id:12, name:'IPUC Cartagena',    city:'Cartagena',    lat:10.39100, lng:-75.47940, address:'Av. Pedro Heredia #31-97, Cartagena',       schedule:'Dom 10am y 6pm · Jue 7pm',    desc:'Sede en la Ciudad Heroica con ministerio de jóvenes y evangelismo costero.' },
+];
+
+const NEWS = [
+  { tag:'Evento Nacional', color:'nc-blue',   icon:'🎉',
+    title:'IPUC celebra su 89° Aniversario con gran Congreso Nacional en Bogotá',
+    excerpt:'Miles de miembros de todo el país se reunirán del 15 al 18 de mayo en Corferias para celebrar un nuevo aniversario con alabanza, predicación y comunión.',
+    date:'12 May 2026', author:'Redacción IPUC' },
+  { tag:'Social',          color:'nc-green',  icon:'🤝',
+    title:'Programa de asistencia IPUC beneficia a más de 8.000 familias en 2026',
+    excerpt:'A través de sus ministerios de bienestar, la IPUC entregó mercados, atención médica y apoyo psicológico en 15 departamentos del país.',
+    date:'5 May 2026',  author:'Ministerio Social' },
+  { tag:'Nueva Sede',      color:'nc-gold',   icon:'⛪',
+    title:'Inauguración de nueva sede IPUC en Bello, Antioquia',
+    excerpt:'Con capacidad para 600 personas, la nueva iglesia en Bello se convierte en la décima sede de la IPUC en el Área Metropolitana de Medellín.',
+    date:'28 Abr 2026', author:'Diócesis Antioquia' },
+  { tag:'Juventud',        color:'nc-purple', icon:'🎸',
+    title:'Festival de Alabanza Joven IPUC reúne a 5.000 jóvenes en Cali',
+    excerpt:'El festival "Nueva Generación 2026" contó con alabanza contemporánea, paneles sobre fe y tecnología, y un poderoso llamado al ministerio.',
+    date:'20 Abr 2026', author:'Juventud IPUC' },
+  { tag:'Misiones',        color:'nc-teal',   icon:'✈️',
+    title:'IPUC Colombia envía equipo misionero a Ecuador y Venezuela',
+    excerpt:'Un grupo de 30 misioneros partió hacia comunidades fronterizas para apoyar la plantación de iglesias y trabajo humanitario en zonas de difícil acceso.',
+    date:'10 Abr 2026', author:'Departamento de Misiones' },
+];
+
+// ================================================================
+// MAP
+// ================================================================
+let map, userMarker;
+
+function initMap() {
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  });
+
+  map = L.map('map').setView([5.5, -74.0], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18,
+  }).addTo(map);
+
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="
+      width:34px;height:34px;
+      background:linear-gradient(135deg,#1565C0,#1976D2);
+      border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+      border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.3);
+      display:flex;align-items:center;justify-content:center;
+    "><span style="transform:rotate(45deg);font-size:13px;line-height:1">✝</span></div>`,
+    iconSize: [34,34], iconAnchor: [17,34], popupAnchor: [0,-36],
+  });
+
+  CHURCHES.forEach(c => {
+    L.marker([c.lat, c.lng], { icon })
+      .addTo(map)
+      .bindPopup(`
+        <div style="font-family:Poppins,sans-serif;min-width:210px;padding:2px">
+          <h3 style="color:#1565C0;margin:0 0 5px;font-size:.95rem;font-weight:700">${c.name}</h3>
+          <p style="color:#64748b;font-size:.76rem;margin:0 0 6px">📍 ${c.address}</p>
+          <p style="color:#1e293b;font-size:.8rem;margin:0 0 6px">${c.desc}</p>
+          <p style="color:#1565C0;font-size:.76rem;margin:0">🕐 ${c.schedule}</p>
+        </div>`);
+  });
+}
+
+// ================================================================
+// CHURCHES GRID
+// ================================================================
+let activeCity = 'Todas';
+
+function renderChurches() {
+  const q = (document.getElementById('churchSearch').value || '').toLowerCase();
+  const list = CHURCHES.filter(c => {
+    const matchCity  = activeCity === 'Todas' || c.city === activeCity;
+    const matchQuery = !q || c.name.toLowerCase().includes(q)
+                          || c.city.toLowerCase().includes(q)
+                          || c.address.toLowerCase().includes(q);
+    return matchCity && matchQuery;
+  });
+
+  const grid = document.getElementById('churchesGrid');
+  if (!list.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-light)">
+      <div style="font-size:3rem;margin-bottom:1rem">🔍</div>
+      <p>No se encontraron iglesias con ese criterio.</p></div>`;
+    return;
+  }
+  grid.innerHTML = list.map(c => `
+    <div class="church-card">
+      <div class="cc-head">
+        <div class="cc-icon">⛪</div>
+        <div>
+          <h3>${c.name}</h3>
+          <div class="city"><i class="fas fa-map-pin"></i> ${c.city}</div>
+        </div>
+      </div>
+      <div class="cc-body">
+        <p>${c.desc}</p>
+        <div class="cc-meta">
+          <span><i class="fas fa-location-dot"></i>${c.address}</span>
+          <span><i class="fas fa-clock"></i>${c.schedule}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCityFilters() {
+  const cities = ['Todas', ...new Set(CHURCHES.map(c => c.city))];
+  document.getElementById('cityFilters').innerHTML = cities.map(city =>
+    `<button class="city-btn ${city === activeCity ? 'active' : ''}"
+      onclick="setCity('${city}')">${city}</button>`
+  ).join('');
+}
+
+function setCity(city) {
+  activeCity = city;
+  renderCityFilters();
+  renderChurches();
+}
+
+// ================================================================
+// NEWS
+// ================================================================
+function renderNews() {
+  document.getElementById('newsGrid').innerHTML = NEWS.map(n => `
+    <div class="news-card">
+      <div class="news-img ${n.color}">
+        <span>${n.icon}</span>
+        <span class="news-date-tag">${n.date}</span>
+      </div>
+      <div class="nc-body">
+        <span class="nc-tag">${n.tag}</span>
+        <h3>${n.title}</h3>
+        <p>${n.excerpt}</p>
+      </div>
+      <div class="nc-footer">
+        <span class="nc-author"><i class="fas fa-user-circle"></i> ${n.author}</span>
+        <a href="#" class="nc-read">Leer más <i class="fas fa-arrow-right"></i></a>
+      </div>
+    </div>`).join('');
+}
+
+// ================================================================
+// GEOLOCATION
+// ================================================================
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (lat2 - lat1) * r, dLng = (lng2 - lng1) * r;
+  const a = Math.sin(dLat/2)**2
+          + Math.cos(lat1*r) * Math.cos(lat2*r) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function locateUser() {
+  if (!navigator.geolocation) {
+    showToast('Tu navegador no soporta geolocalización.', 'error');
+    return;
+  }
+  const btn = document.getElementById('locateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Localizando…';
+
+  navigator.geolocation.getCurrentPosition(
+    ({ coords: { latitude, longitude } }) => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Actualizar ubicación';
+
+      if (userMarker) map.removeLayer(userMarker);
+      const userIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:16px;height:16px;background:#FFC107;border-radius:50%;
+               border:3px solid #fff;box-shadow:0 0 0 4px rgba(255,193,7,.35)"></div>`,
+        iconSize:[16,16], iconAnchor:[8,8],
+      });
+      userMarker = L.marker([latitude, longitude], { icon: userIcon })
+        .addTo(map).bindPopup('<b style="font-family:Poppins">Tu ubicación</b>').openPopup();
+      map.setView([latitude, longitude], 10);
+
+      const sorted = CHURCHES
+        .map(c => ({ ...c, dist: haversine(latitude, longitude, c.lat, c.lng) }))
+        .sort((a, b) => a.dist - b.dist);
+
+      document.getElementById('nearbyList').innerHTML = sorted.map((c, i) => `
+        <div class="nearby-item">
+          <div class="nearby-rank ${i === 0 ? 'gold' : ''}">${i + 1}</div>
+          <div class="nearby-info">
+            <h4>${c.name}</h4>
+            <p>📍 ${c.address}</p>
+          </div>
+          <div class="nearby-dist">
+            <i class="fas fa-route"></i>
+            ${c.dist < 1 ? (c.dist * 1000).toFixed(0) + ' m' : c.dist.toFixed(1) + ' km'}
+          </div>
+        </div>`).join('');
+
+      document.getElementById('nearbyResults').classList.add('visible');
+      showToast('Ubicación encontrada. Iglesias ordenadas por distancia.', 'success');
+      document.getElementById('nearby').scrollIntoView({ behavior: 'smooth' });
+    },
+    err => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Activar mi ubicación';
+      const msg = { 1:'Permiso denegado. Permite el acceso a tu ubicación.',
+                    2:'No se pudo obtener tu posición. Intenta de nuevo.',
+                    3:'Tiempo agotado. Intenta de nuevo.' };
+      showToast(msg[err.code] || 'Error al obtener ubicación.', 'error');
+    },
+    { timeout: 10000, enableHighAccuracy: true }
+  );
+}
+
+// ================================================================
+// TOAST
+// ================================================================
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 4200);
+}
+
+// ================================================================
+// NAVBAR
+// ================================================================
+window.addEventListener('scroll', () =>
+  document.getElementById('navbar').classList.toggle('scrolled', scrollY > 40));
+
+document.getElementById('navToggle').addEventListener('click', () =>
+  document.getElementById('navLinks').classList.toggle('open'));
+
+document.querySelectorAll('.nav-links a').forEach(a =>
+  a.addEventListener('click', () =>
+    document.getElementById('navLinks').classList.remove('open')));
+
+// ================================================================
+// INIT
+// ================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('statCount').textContent = CHURCHES.length + '+';
+  initMap();
+  renderCityFilters();
+  renderChurches();
+  renderNews();
+});
+</script>
+</body>
+</html>
